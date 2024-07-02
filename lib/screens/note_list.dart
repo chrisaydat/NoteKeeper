@@ -1,22 +1,22 @@
+import 'package:flutter/material.dart';
 import 'package:database_flutter_app/models/note.dart';
 import 'package:database_flutter_app/screens/note_detail.dart';
 import 'package:database_flutter_app/utils/database_helper.dart';
-import 'package:flutter/material.dart';
-import 'package:sqflite/sqflite.dart';
 
 class NoteList extends StatefulWidget {
+  @override
   _NoteListState createState() => _NoteListState();
 }
 
 class _NoteListState extends State<NoteList> {
-  DatabaseHelper _databaseHelper = DatabaseHelper();
-  List<Note> _noteList;
+  late DatabaseHelper _databaseHelper;
+  late List<Note> _noteList = [];
   int count = 0;
 
   @override
   Widget build(BuildContext context) {
-    if (_noteList == null) {
-      _noteList = List<Note>();
+    if (_noteList.isEmpty) {
+      _databaseHelper = DatabaseHelper();
       updateListView();
     }
 
@@ -28,7 +28,6 @@ class _NoteListState extends State<NoteList> {
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           debugPrint("FAB Pressed");
-          // This is used to navigate to a new screen
           navigateToDetail(Note('', '', 2), 'Add Note');
         },
         child: Icon(Icons.add),
@@ -38,7 +37,7 @@ class _NoteListState extends State<NoteList> {
   }
 
   Widget getNoteListView() {
-    TextStyle style = Theme.of(context).textTheme.subhead;
+    TextStyle style = Theme.of(context).textTheme.titleMedium!;
     return ListView.builder(
       itemCount: count,
       itemBuilder: (BuildContext context, int position) {
@@ -69,11 +68,10 @@ class _NoteListState extends State<NoteList> {
   }
 
   void navigateToDetail(Note note, String title) async {
-    // By prefixing await keyword, we are simple awaiting the response from noteDetail Screen.
-    bool result = await Navigator.push(context, MaterialPageRoute(builder: (context) { 
+    bool result = await Navigator.push(context, MaterialPageRoute(builder: (context) {
       return NoteDetail(note, title);
     }));
-    if(result == true) {
+    if (result == true) {
       updateListView();
     }
   }
@@ -82,10 +80,8 @@ class _NoteListState extends State<NoteList> {
     switch (priority) {
       case 1:
         return Colors.red;
-        break;
       case 2:
         return Colors.yellow;
-        break;
       default:
         return Colors.yellow;
     }
@@ -95,17 +91,15 @@ class _NoteListState extends State<NoteList> {
     switch (priority) {
       case 1:
         return Icon(Icons.play_arrow);
-        break;
       case 2:
         return Icon(Icons.arrow_right);
-        break;
       default:
         return Icon(Icons.arrow_right);
     }
   }
 
   void _delete(BuildContext context, Note note) async {
-    int result = await _databaseHelper.delete(note.id);
+    int result = await _databaseHelper.delete(note.id!);
     if (result != 0) {
       _showSnackBar(context, 'Note Deleted Successfully');
       updateListView();
@@ -113,22 +107,14 @@ class _NoteListState extends State<NoteList> {
   }
 
   void _showSnackBar(BuildContext context, String message) {
-    var snackbar = SnackBar(content: Text(message));
-    Scaffold.of(context).showSnackBar(snackbar);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void updateListView() async {
-    var database = await  _databaseHelper.initializeDatabase();
     List<Note> noteList = await _databaseHelper.getNotesList();
-     setState(() {
-          this._noteList = noteList;
-          this.count = noteList.length;
-        });
-    // final Future<Database> dbFuture = _databaseHelper.initializeDatabase();
-    // dbFuture.then((database) {
-    //   Future<List<Note>> noteListFuture = _databaseHelper.getNotesList();
-    //   noteListFuture.then((noteList) { 
-    //   });
-    // });
+    setState(() {
+      _noteList = noteList;
+      count = noteList.length;
+    });
   }
 }

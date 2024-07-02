@@ -9,36 +9,41 @@ class NoteDetail extends StatefulWidget {
 
   NoteDetail(this.note, this.appBarTitle);
 
-  _NoteDetailState createState() =>
-      _NoteDetailState(this.note, this.appBarTitle);
+  @override
+  _NoteDetailState createState() => _NoteDetailState();
 }
 
 class _NoteDetailState extends State<NoteDetail> {
-  String appBarTitle;
-  Note note;
-  DatabaseHelper databaseHelper = DatabaseHelper();
+  late String appBarTitle;
+  late Note note;
+  late DatabaseHelper databaseHelper;
 
   var _formKey = GlobalKey<FormState>();
-
-  _NoteDetailState(this.note, this.appBarTitle);
 
   var _priorities = ["High", "Low"];
   TextEditingController titleController = TextEditingController();
   TextEditingController descriptionController = TextEditingController();
 
   @override
-  Widget build(BuildContext context) {
-    TextStyle textStyle = Theme.of(context).textTheme.title;
+  void initState() {
+    super.initState();
+    appBarTitle = widget.appBarTitle;
+    note = widget.note;
+    databaseHelper = DatabaseHelper();
 
     // Setting the text on the TextFields.
     titleController.text = note.title;
     descriptionController.text = note.description;
+  }
 
-    // This WillPopScope widget is used to control the device back button
+  @override
+  Widget build(BuildContext context) {
+    TextStyle textStyle = Theme.of(context).textTheme.titleLarge!;
+
     return WillPopScope(
-      // This handler will be invoked when device back button is pressed.
       onWillPop: () {
         moveToLastScreen();
+        return Future.value(false);
       },
       child: Scaffold(
         appBar: AppBar(
@@ -53,7 +58,7 @@ class _NoteDetailState extends State<NoteDetail> {
         body: Form(
           key: _formKey,
           child: Padding(
-            padding: EdgeInsets.only(top: 10.0, right: 10.0, left: 10.0),
+            padding: EdgeInsets.all(10.0),
             child: ListView(
               children: <Widget>[
                 ListTile(
@@ -64,8 +69,10 @@ class _NoteDetailState extends State<NoteDetail> {
                         child: Text(dropDownStringItem),
                       );
                     }).toList(),
-                    onChanged: (String newItemSelected) {
-                      updatePriorityAsInt(newItemSelected);
+                    onChanged: (String? newItemSelected) {
+                      if (newItemSelected != null) {
+                        updatePriorityAsInt(newItemSelected);
+                      }
                     },
                     style: textStyle,
                     value: updatePriorityAsString(note.priority),
@@ -76,12 +83,13 @@ class _NoteDetailState extends State<NoteDetail> {
                   child: TextFormField(
                     style: textStyle,
                     controller: titleController,
-                    validator: (String userInput) {
-                      if(userInput.isEmpty) {
+                    validator: (String? userInput) {
+                      if (userInput == null || userInput.isEmpty) {
                         return 'Please enter title';
                       }
+                      return null;
                     },
-                    onFieldSubmitted: (value) {
+                    onFieldSubmitted: (String value) {
                       updateTitle();
                     },
                     decoration: InputDecoration(
@@ -99,10 +107,11 @@ class _NoteDetailState extends State<NoteDetail> {
                   child: TextFormField(
                     style: textStyle,
                     controller: descriptionController,
-                    validator: (String userInput) {
-                      if(userInput.isEmpty) {
+                    validator: (String? userInput) {
+                      if (userInput == null || userInput.isEmpty) {
                         return 'Please enter description';
                       }
+                      return null;
                     },
                     onFieldSubmitted: (String value) {
                       updateDescription();
@@ -122,31 +131,31 @@ class _NoteDetailState extends State<NoteDetail> {
                   child: Row(
                     children: <Widget>[
                       Expanded(
-                        child: RaisedButton(
-                          color: Colors.deepPurple,
-                          child: Text("Save"),
-                          textColor: Colors.white,
-                          splashColor: Colors.yellow,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            foregroundColor: Colors.white, backgroundColor: Colors.deepPurple,
+                            // splashColor: Colors.yellow,
+                          ),
                           onPressed: () {
-                            if(_formKey.currentState.validate()) {
+                            if (_formKey.currentState!.validate()) {
                               save();
                             }
                           },
+                          child: Text("Save"),
                         ),
                       ),
-                      Container(
-                        width: 5.0,
-                      ),
+                      SizedBox(width: 5.0),
                       Expanded(
-                        child: RaisedButton(
-                          color: Colors.deepPurple,
-                          child: Text("Delete"),
-                          textColor: Colors.white,
-                          splashColor: Colors.yellow,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            foregroundColor: Colors.white, backgroundColor: Colors.deepPurple,
+                            
+                          ),
                           onPressed: () {
                             debugPrint("Delete Button pressed");
                             delete();
                           },
+                          child: Text("Delete"),
                         ),
                       ),
                     ],
@@ -164,7 +173,6 @@ class _NoteDetailState extends State<NoteDetail> {
     Navigator.pop(context, true); // passing the true value to noteList screen.
   }
 
-  // Convert the string priority in the form of integer before saving in the database.
   void updatePriorityAsInt(String value) {
     switch (value) {
       case 'High':
@@ -173,11 +181,13 @@ class _NoteDetailState extends State<NoteDetail> {
       case 'Low':
         note.priority = 2;
         break;
+      default:
+        note.priority = 1; // Provide a default case or ensure assignment
     }
   }
 
-  // Convert int priority in the form of String to display it in the DropDown
-  String updatePriorityAsString(int value) {
+  String? updatePriorityAsString(int value) {
+    if (value == null) return null; // Handle null case if necessary
     String priority;
     switch (value) {
       case 1:
@@ -186,32 +196,28 @@ class _NoteDetailState extends State<NoteDetail> {
       case 2:
         priority = _priorities[1];
         break;
+      default:
+        priority = _priorities[0]; // Provide a default case or ensure assignment
     }
     return priority;
   }
 
-  // Update title of note object.
   void updateTitle() {
     note.title = titleController.text;
   }
 
-  // Update description of note object.
   void updateDescription() {
     note.description = descriptionController.text;
   }
 
-  // Saving data to database.
   void save() async {
     moveToLastScreen();
-    note.date =
-        DateFormat.yMMMd().format(DateTime.now()); // Sets the current date
+    note.date = DateFormat.yMMMd().format(DateTime.now());
 
     int result;
     if (note.id != null) {
-      // Update operation
       result = await databaseHelper.update(note);
     } else {
-      // Insert operation
       result = await databaseHelper.insert(note);
     }
 
@@ -228,7 +234,7 @@ class _NoteDetailState extends State<NoteDetail> {
       _showAlertDialog('Status', 'No note was deleted');
       return;
     } else {
-      int result = await databaseHelper.delete(note.id);
+      int result = await databaseHelper.delete(note.id!);
       if (result != 0) {
         _showAlertDialog('Status', 'Note Deleted Successfully');
       } else {
